@@ -8,13 +8,8 @@
 > [!CAUTION]  
 > This project is still in development use it at your on risk.
 
-> [!WARNING]
-> Don't use 'import' or 'from' anywhere else in your input file. It will break
-
 ## Usage
 
 ``` pip install stdlib-list ```
 
 ``` python3 pretty_imports.py <input.py> ```
-
-

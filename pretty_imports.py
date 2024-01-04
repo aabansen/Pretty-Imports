@@ -50,6 +50,11 @@ def add_lines(lines, file_path):
     with open(file_path, "w") as python_file:
         python_file.writelines(lines)
 
+def str_contains(lelist, lestr):
+    if [e in lelist for e in lelist if e in lestr]:
+        return True
+    return False
+
 def get_lines_until(stop, file_path):
     lines = []
     del_lines = []
@@ -79,15 +84,17 @@ class Organizer:
         }
 
     def get_imports(self):
+        filter_keys = ["#", "'", '"']
+
         for line in self.lines:
-            if "from" in line or "import" in line:
-                self.raw_imports.append(line)
-        print(self.raw_imports)
+            if "from " in line or "import " in line:
+                if not str_contains(filter_keys, line):
+                    self.raw_imports.append(line)
 
     def classify_imports(self):
         local_files = get_local_files()
-        
-        for module in self.raw_imports:
+    
+        for module in self.raw_imports.copy():
             module_name = re.split("[ .]", module)[1]
 
             if module_name in local_files:

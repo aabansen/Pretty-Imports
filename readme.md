@@ -5,9 +5,6 @@
 
 #### And did I forget to say it sorts them in alphabeticals order?
 
-> [!CAUTION]  
-> This project is still in development use it at your on risk.
-
 ## Usage
 
 ``` pip install stdlib-list ```

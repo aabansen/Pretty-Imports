@@ -1,9 +1,9 @@
 # Pretty Imports
-### A useless prograrm for people with ocd.
+### A useless program for people with OCD.
 
 #### It organizes your python imports into third party imports, built-in imports, local imports.
 
-#### And did I forget to say it sorts them in alphabeticals order?
+#### And did I forget to say it sorts them in alphabetical order?
 
 ## Usage
 

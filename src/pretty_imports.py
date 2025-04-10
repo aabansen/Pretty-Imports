@@ -1,8 +1,8 @@
-import re
-import os
-import sys
-
 from stdlib_list import in_stdlib
+
+import os
+import re
+import sys
 
 def get_code(path):
     code = []
@@ -51,8 +51,9 @@ def classify_imports(imports):
 
 def add_esc_chars(classified_imports):
     for key, value in classified_imports.items():
-        classified_imports[key] = [elm + '\n' for elm in value]
-        classified_imports[key][-1] += '\n'
+        if len(value) > 0:
+            classified_imports[key] = [elm + '\n' for elm in value]
+            classified_imports[key][-1] += '\n'
 
 def alphabetize(classified_imports):
     for key, value in classified_imports.items():
@@ -80,7 +81,6 @@ def pretty_imports(path):
     add_esc_chars(classified_imports)
 
     formatted_imports = format_imports(classified_imports)
-
     write_imports(formatted_imports, path, code, pattern)
 
 if __name__ == '__main__':
@@ -90,6 +90,6 @@ if __name__ == '__main__':
         sys.exit("ERROR: input file not provided\n")
 
     pretty_imports(sys.argv[1])
-    
+
     print("Formatting...")
     print("formatting completed\n")

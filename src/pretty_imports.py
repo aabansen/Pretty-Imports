@@ -1,141 +1,95 @@
+import re
+import os
+import sys
+
 from stdlib_list import in_stdlib
 
-import os
-import re
-import sys
-import logging
-
-def remove_items(_list, item):
-    return list(filter(lambda a: a != item, _list))
-
-def get_local_files(): # returns a list of all the files in the current dir.
-    local_files = os.listdir(os.getcwd())
-    local_files = [file.split(".", 1)[0] for file in local_files] 
-    return local_files
-
-def combine_lists(lists):
-    combined_list = []
-
-    for i in range(0, len(lists)):
-        if i > 0:
-            combined_list += (["\n"] + lists[i]) # To format the imports nicely by adding a whitespace between them.
-        else:
-            combined_list += lists[i]
-
-    return combined_list
-
-def get_lines(python_file):
-    lines = python_file.readlines()
-    lines = [line.strip() for line in lines]
-    lines = remove_items(lines, '')
-
-    return lines
-
-def read_python_file(file_path, raw=False):
-    if ".py" not in file_path:
-        print("Usage: pretty_imports.py <input.py>")
-        logging.error("input file is not a python file or not found")
-        exit(1)
+def get_code(path):
+    code = []
 
     try:
-        with open(file_path, "r") as python_file:        
-                lines = get_lines(python_file)
-                return lines
-    except FileNotFoundError:
-        print("Usage: pretty_imports.py <input.py>")
-        logging.error("input file not found or not a python file")
-        exit(1)
+        with open(path, 'r') as f:
+            code = f.read()
+    except FileNotFoundError as e:
+        sys.exit("ERROR: Input file provided does not exist\n")
+
+    return code 
+
+def get_imports(code):
+    pattern = re.compile(r'^(from|import) ([a-zA-Z0-9*_. ]+$)', re.MULTILINE)
+
+    if not pattern.search(code):
+        sys.exit("ERROR: No imports found\n")
+
+    imports = pattern.finditer(code)
+
+    return imports, pattern
+
+def get_local_files():
+    local_files = os.listdir(os.getcwd())
+    local_files = [file.split('.', 1)[0] for file in local_files]
+    return local_files
+
+def classify_imports(imports):
+    classified_imports = {
+        'third_party': [],
+        'built_in': [],
+        'local': []
+    }
+
+    for imp in imports:
+        module_name =  re.split('[ .]', imp.group(0))[1]
+
+        if in_stdlib(module_name):
+            classified_imports['built_in'].append(imp.group(0))
+        elif module_name in get_local_files():
+            classified_imports['local'].append(imp.group(0))
+        else:
+            classified_imports['third_party'].append(imp.group(0))
+
+    return classified_imports
+
+def add_esc_chars(classified_imports):
+    for key, value in classified_imports.items():
+        classified_imports[key] = [elm + '\n' for elm in value]
+        classified_imports[key][-1] += '\n'
+
+def alphabetize(classified_imports):
+    for key, value in classified_imports.items():
+        classified_imports[key] = sorted(value)
+
+def format_imports(classified_imports):
+    combined_imports = sum(list(classified_imports.values()), [])
+    return ''.join(combined_imports)
+
+def write_imports(imports, path, code, pattern):
+    cleaned_code = re.sub(pattern, '', code).lstrip()
+
+    with open(path, 'w') as f:
+        f.write(imports + cleaned_code)
+
+def pretty_imports(path):
+    if '.py' not in path:
+        sys.exit("ERROR: Input file provided is not a python file\n")
+
+    code = get_code(path) 
+    imports, pattern = get_imports(code)
+    classified_imports = classify_imports(imports)
+
+    alphabetize(classified_imports)
+    add_esc_chars(classified_imports)
+
+    formatted_imports = format_imports(classified_imports)
+
+    write_imports(formatted_imports, path, code, pattern)
+
+if __name__ == '__main__':
+    try:
+        file_path = sys.argv[1]
+    except IndexError:
+        sys.exit("ERROR: input file not provided\n")
+
+    pretty_imports(sys.argv[1])
     
-def add_lines(lines, file_path):
-    with open(file_path, "w") as python_file:
-        python_file.writelines(lines)
-
-def str_contains(lelist, lestr):
-    if [e in lelist for e in lelist if e in lestr]:
-        return True
-    return False
-
-def get_lines_after(stop, file_path): # returns a list of all lines after a particular lines.
-    lines = []
-    other_lines = []
-
-    with open(file_path, "r") as python_file:
-        lines = python_file.readlines()
-
-        for num, line in enumerate(lines):
-            if line.strip() == stop:
-                other_lines = lines[num+1:]
-
-    if del_lines[0] == "\n":
-        other_lines.pop(0)
-
-    return other_lines 
-                            
-class Organizer:
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.lines = read_python_file(self.file_path)
-        
-        self.raw_imports = []
-        self.imports = {
-            "third_party": [],
-            "builtin": [],
-            "local": []
-        }
-
-    def get_imports(self):
-        filter_keys = ["#", "'", '"']
-
-        for line in self.lines:
-            if "from " in line or "import " in line: # "import " is used instead of "import" so that it ignores variable, function names, and class names.
-                if not str_contains(filter_keys, line): # If the words import or from are inside of comments or strings ignore them.
-                    self.raw_imports.append(line)
-
-    def classify_imports(self): # classifies the imports in the correct order.
-        local_files = get_local_files()
-    
-        for module in self.raw_imports.copy():
-            module_name = re.split("[ .]", module)[1]
-
-            if module_name in local_files:
-                self.imports["local"].append(module)
-            elif in_stdlib(module_name):
-                self.imports["builtin"].append(module)
-            else:
-                self.imports["third_party"].append(module)
-
-    def alphabetize(self): # alphabeticaly order the imports
-        for key, value in self.imports.items():
-            self.imports[key] = sorted(value)
-
-    def add_esc_chars(self, esc_char): # adding esc characters to the classified imports so that they can be written to the file.
-        for key, value in self.imports.items():
-            self.imports[key] = [elm + esc_char for elm in value]
-    
-    def pretty_imports(self): # writes the formatted file.
-        other_lines = get_lines_after(self.raw_imports[-1], self.file_path)
-        imports = combine_lists(list(self.imports.values()))
-        add_lines(imports + other_lines, self.file_path)
-        
-    def organize(self):
-        self.get_imports()
-        self.classify_imports()
-        self.alphabetize()
-        self.add_esc_chars("\n")
-        self.pretty_imports()
-                
-def main():
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.ERROR)
-
-    if len(sys.argv) < 2:
-        print("Usage: pretty_imports.py <input.py>")
-        logging.error("no input file provided") 
-        return 0
-
-    file_path = sys.argv[1]
-    
-    organizer = Organizer(file_path)
-    organizer.organize()
-
-if __name__ == "__main__":
-    main()
+    print("Formatting...")
+    print("formatting completed\n")
